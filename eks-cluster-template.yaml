@@ -4,7 +4,7 @@ kind: ClusterConfig
 metadata:
   name: tekton-pipeline-demo-cluster
   region: eu-central-1
-  version: "1.18"
+  version: "1.21"
   tags:
     project: tekton-pipeline-demo
 
@@ -19,4 +19,3 @@ managedNodeGroups:
       role: workers
     tags:
       project: tekton-pipeline-demo
-    
