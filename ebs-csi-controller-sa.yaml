@@ -1,0 +1,20 @@
+apiVersion: v1
+automountServiceAccountToken: true
+kind: ServiceAccount
+metadata:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::190702572683:role/eksctl-tekton-pipeline-demo-cluster-addon-ia-Role1-1FQ52ETTUVV92
+    meta.helm.sh/release-name: aws-ebs-csi-driver
+    meta.helm.sh/release-namespace: kube-system
+  creationTimestamp: "2023-06-29T11:13:29Z"
+  labels:
+    app.kubernetes.io/component: csi-driver
+    app.kubernetes.io/instance: aws-ebs-csi-driver
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: aws-ebs-csi-driver
+    app.kubernetes.io/version: 1.20.0
+    helm.sh/chart: aws-ebs-csi-driver-2.20.0
+  name: ebs-csi-controller-sa
+  namespace: kube-system
+  resourceVersion: "55146"
+  uid: 9486af6d-55b7-437f-a47f-e684d5a91b2e

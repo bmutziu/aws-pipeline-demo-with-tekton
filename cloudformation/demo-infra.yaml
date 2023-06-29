@@ -145,9 +145,9 @@ Resources:
         SecurityGroupIds:
           - !GetAtt TektonDemoWebhookSecurityGroup.GroupId
         SubnetIds:
-          - !Select [ 0, !Split [ ",", !Ref TektonDemoClusterSubnets ] ]
-          - !Select [ 1, !Split [ ",", !Ref TektonDemoClusterSubnets ] ]
-          - !Select [ 2, !Split [ ",", !Ref TektonDemoClusterSubnets ] ]
+          - !Select [ 0, !Split [ " ", !Ref TektonDemoClusterSubnets ] ]
+          - !Select [ 1, !Split [ " ", !Ref TektonDemoClusterSubnets ] ]
+          - !Select [ 2, !Split [ " ", !Ref TektonDemoClusterSubnets ] ]
       Tags:
         - Key: project
           Value: tekton-pipeline-demo

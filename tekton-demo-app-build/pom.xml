@@ -11,7 +11,7 @@
 		<repository>
 			<id>tekton-demo-domain-tekton-demo-repository</id>
 			<name>tekton-demo-domain-tekton-demo-repository</name>
-			<url>https://tekton-demo-domain-${AWS_ACCOUNT_ID}.d.codeartifact.${AWS_REGION}.amazonaws.com/maven/tekton-demo-repository/</url>
+			<url>https://tekton-demo-domain-190702572683.d.codeartifact.eu-west-1.amazonaws.com/maven/tekton-demo-repository/</url>
 		</repository>
 	</distributionManagement>
 

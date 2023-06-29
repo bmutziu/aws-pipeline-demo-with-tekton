@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://git-codecommit.eu-central-1.amazonaws.com/v1/repos/tekton-demo-app-deploy
+    repoURL: https://git-codecommit.eu-west-1.amazonaws.com/v1/repos/tekton-demo-app-deploy
     targetRevision: master
     path: ./
     helm:

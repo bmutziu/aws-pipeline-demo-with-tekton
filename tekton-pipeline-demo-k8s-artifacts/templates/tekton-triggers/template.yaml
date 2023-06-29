@@ -1,4 +1,4 @@
-apiVersion: triggers.tekton.dev/v1alpha1
+apiVersion: triggers.tekton.dev/v1beta1
 kind: TriggerTemplate
 metadata:
   name: simple-maven-build-template
@@ -33,5 +33,3 @@ spec:
       - name: artifact-store
         persistentVolumeClaim:
           claimName: artifact-store
-
-        

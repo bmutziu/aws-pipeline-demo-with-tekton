@@ -2,8 +2,8 @@ apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
 metadata:
-  name: $EKS_CLUSTER_NAME
-  region: $AWS_REGION
+  name: tekton-pipeline-demo-cluster
+  region: eu-west-1
 
 iam:
   withOIDC: true
@@ -18,7 +18,7 @@ iam:
         name: chartmuseum-sa
         namespace: support
       attachPolicyARNs:
-        - $TEKTON_DEMO_CHARTMUSEUM_POLICY
+        - arn:aws:iam::190702572683:policy/TektonDemoBuckets-TektonDemoServiceAccountChartPolicy-J99EJ2MKND2B
     - metadata:
         name: aws-lb-controller-sa
         namespace: kube-system

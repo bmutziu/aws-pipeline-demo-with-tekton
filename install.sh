@@ -2,13 +2,13 @@
 set -e
 
 # Define version for third party dependencies
-export TEKTON_PIPELINE_VERSION="v0.26.0"
-export TEKTON_TRIGGERS_VERSION="v0.14.2"
-export TEKTON_DASHBOARD_VERSION="v0.18.1"
-export CHARTMUSEUM_VERSION="3.1.0"
-export AWS_LB_CONTROLLER_VERSION="1.2.3"
-export AWS_EBS_CSI_DRIVER_VERSION="0.9.4"
-export ARGOCD_VERSION="v2.0.4"
+export TEKTON_PIPELINE_VERSION="v0.47.3"
+export TEKTON_TRIGGERS_VERSION="v0.24.1"
+export TEKTON_DASHBOARD_VERSION="v0.37.0"
+export CHARTMUSEUM_VERSION="3.10.1"
+export AWS_LB_CONTROLLER_VERSION="1.4.8"
+export AWS_EBS_CSI_DRIVER_VERSION="2.20.0"
+export ARGOCD_VERSION="v2.4.15"
 export EKS_VERSION="1.21"
 
 # init
@@ -29,7 +29,8 @@ pause "prereq"
 
 export AWS_AUTHENTICATED_IDENTITY=$(aws sts get-caller-identity | jq -r .Arn | cut -d "/" -f2)
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --output text --query Account)
-export AWS_REGION=$(aws configure get region)
+# export AWS_REGION=$(aws configure get region)
+export AWS_REGION="eu-west-1"
 export TMP_FILE=$(mktemp)
 export DOCKER_SCAN_SUGGEST=false
 
@@ -188,13 +189,12 @@ pause "build"
 
 # Install AWS EBS CSI Driver
 echo "[INFO] $(date +"%T") Deploy aws-ebs-csi-driver [${AWS_EBS_CSI_DRIVER_VERSION}]..."
-helm repo add aws-ebs-csi-driver https://kubernetes-sigs.github.io/aws-ebs-csi-driver > /dev/null
+# helm repo add aws-ebs-csi-driver https://kubernetes-sigs.github.io/aws-ebs-csi-driver > /dev/null
 # helm install -n kube-system aws-ebs-csi-driver aws-ebs-csi-driver/aws-ebs-csi-driver --version $AWS_EBS_CSI_DRIVER_VERSION --set enableVolumeScheduling=true --set enableVolumeResizing=true --set enableVolumeSnapshot=true --set serviceAccount.snapshot.create=false --set serviceAccount.controller.create=false --set serviceAccount.controller.name=ebs-csi-controller-sa --set serviceAccount.snapshot.name=ebs-csi-controller-sa > /dev/null
 
 # Install AWS Load Balancer Controller
 echo "[INFO] $(date +"%T") Deploy aws-load-balancer-controller [${AWS_LB_CONTROLLER_VERSION}]..."
-helm repo add eks https://aws.github.io/eks-charts > /dev/null
-# kubectl apply -k "github.com/aws/eks-charts/stable/aws-load-balancer-controller//crds?ref=master"
+# helm repo add eks https://aws.github.io/eks-charts > /dev/null
 # helm install -n kube-system aws-load-balancer-controller eks/aws-load-balancer-controller --version $AWS_LB_CONTROLLER_VERSION --set clusterName=tekton-pipeline-demo-cluster --set serviceAccount.create=false --set serviceAccount.name=aws-lb-controller-sa > /dev/null 
 
 pause "aws ebs csi & lb controller"
@@ -210,23 +210,24 @@ kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline
 # Install Tekton Triggers
 echo "[INFO] $(date +"%T") Deploy Tekton Triggers [${TEKTON_TRIGGERS_VERSION}]..."
 kubectl apply --filename https://storage.googleapis.com/tekton-releases/triggers/previous/${TEKTON_TRIGGERS_VERSION}/release.yaml
+kubectl apply --filename https://storage.googleapis.com/tekton-releases/triggers/previous/${TEKTON_TRIGGERS_VERSION}/interceptors.yaml
 
 # Install Tekton Dashboard
 echo "[INFO] $(date +"%T") Deploy Tekton Dashboard [${TEKTON_DASHBOARD_VERSION}]..."
-kubectl apply --filename https://github.com/tektoncd/dashboard/releases/download/${TEKTON_DASHBOARD_VERSION}/tekton-dashboard-release.yaml
+kubectl apply --filename https://storage.googleapis.com/tekton-releases/dashboard/previous/${TEKTON_DASHBOARD_VERSION}/release.yaml
 
 pause "tekton"
 
 # Install Chartmuseum
 echo "[INFO] $(date +"%T") Deploy Chartmuseum [${CHARTMUSEUM_VERSION}]..."
-helm repo add chartmuseum https://chartmuseum.github.io/charts > /dev/null
-cat chartmuseum-values.yaml | envsubst | tee $TMP_FILE > /dev/null && mv $TMP_FILE chartmuseum-values.yaml
+# helm repo add chartmuseum https://chartmuseum.github.io/charts > /dev/null
+# cat chartmuseum-values.yaml | envsubst | tee $TMP_FILE > /dev/null && mv $TMP_FILE chartmuseum-values.yaml
 # helm install -n support chartmuseum chartmuseum/chartmuseum --version $CHARTMUSEUM_VERSION -f chartmuseum-values.yaml > /dev/null
 
 # Install ArgoCD
 echo "[INFO] $(date +"%T") Deploy ArgoCD [${ARGOCD_VERSION}]..."
 # kubectl create namespace argocd
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/install.yaml
+# kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/install.yaml
 
 pause "chartmuseum & argocd"
 
@@ -241,8 +242,8 @@ pause "patch svc"
 
 # INSTALL TEKTON DEMO 
 echo "[INFO] $(date +"%T") Deploy resources related to the demo..."
-cat tekton-pipeline-demo-k8s-artifacts/values.yaml | envsubst | tee $TMP_FILE > /dev/null && mv $TMP_FILE tekton-pipeline-demo-k8s-artifacts/values.yaml
-helm install tekton-pipeline-demo-k8s-artifacts -f tekton-pipeline-demo-k8s-artifacts/values.yaml --generate-name > /dev/null 
+# cat tekton-pipeline-demo-k8s-artifacts/values.yaml | envsubst | tee $TMP_FILE > /dev/null && mv $TMP_FILE tekton-pipeline-demo-k8s-artifacts/values.yaml
+# helm install tekton-pipeline-demo-k8s-artifacts -f tekton-pipeline-demo-k8s-artifacts/values.yaml --generate-name > /dev/null 
 sleep 30
 
 pause "tekton-pipeline-demo"
@@ -262,6 +263,8 @@ pause "webhook"
 echo "[INFO] $(date +"%T") Update manifest files within deploy repository..."
 mkdir git-clone
 cd git-clone
+# export TEKTON_DEMO_GIT_USERNAME=b.mutiu%40deepsea.ai-at-190702572683
+# export TEKTON_DEMO_GIT_PASSWORD_RAW=LfUsSH3G85%2FS%2FRYPoUIqeCnevX4hCPvTWNjeYxioZJk%3D
 git clone https://${TEKTON_DEMO_GIT_USERNAME}:${TEKTON_DEMO_GIT_PASSWORD}@git-codecommit.${AWS_REGION}.amazonaws.com/v1/repos/tekton-demo-app-deploy > /dev/null 
 cd tekton-demo-app-deploy
 cat values.yaml | envsubst | tee $TMP_FILE > /dev/null && mv $TMP_FILE values.yaml

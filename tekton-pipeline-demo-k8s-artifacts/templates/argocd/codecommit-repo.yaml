@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/part-of: argocd
 data:
   repositories: |
-    - url: https://git-codecommit.eu-central-1.amazonaws.com/v1/repos/tekton-demo-app-deploy
+    - url: https://git-codecommit.eu-west-1.amazonaws.com/v1/repos/tekton-demo-app-deploy
       passwordSecret:
         name: codecommit-credentials
         key: password

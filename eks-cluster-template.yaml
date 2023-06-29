@@ -3,18 +3,18 @@ kind: ClusterConfig
 
 metadata:
   name: tekton-pipeline-demo-cluster
-  region: eu-central-1
-  version: "1.21"
+  region: eu-west-1
+  version: "1.26"
   tags:
     project: tekton-pipeline-demo
 
-availabilityZones: ["eu-central-1a", "eu-central-1b", "eu-central-1c"]
+availabilityZones: ["eu-west-1a", "eu-west-1b", "eu-west-1c"]
 
 managedNodeGroups:
   - name: worker-ng-1
     instanceType: m5.large
     desiredCapacity: 3
-    volumeSize: 80
+    volumeSize: 73
     labels:
       role: workers
     tags:

@@ -2,7 +2,7 @@
 {{- $svcName := .Values.app.name }}
 {{- $svcPort := .Values.service.port }}
 {{- $sg := .Values.ingress.sg }}
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ .Values.app.name }}
@@ -17,8 +17,11 @@ spec:
   rules:
     - http:
         paths:
-        - path: /*
-          backend:
-            serviceName: {{ $svcName }}
-            servicePort: {{ $svcPort }}            
+        - backend:
+            service:
+              name: {{ $svcName }}
+              port:
+                number: {{ $svcPort }}
+          path: /
+          pathType: Prefix
 {{- end}}

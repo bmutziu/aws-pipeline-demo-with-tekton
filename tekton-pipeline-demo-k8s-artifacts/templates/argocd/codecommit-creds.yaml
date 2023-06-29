@@ -5,5 +5,5 @@ metadata:
   namespace: argocd
 type: Opaque
 stringData:
-  username: {{ .Values.pipelines.codeRepo.username }}
+  username: {{ .Values.pipelines.codeRepo.usernameRaw }}
   password: {{ .Values.pipelines.codeRepo.passwordRaw }}

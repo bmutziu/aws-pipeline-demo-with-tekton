@@ -1,20 +1,18 @@
-region: "${AWS_REGION}"
-accountId: "${AWS_ACCOUNT_ID}"
-allowedIpRange: "${MY_IP_ADDRESS}/32"
+region: "eu-west-1"
+accountId: "190702572683"
+allowedIpRange: "213.233.88.212/32"
 chartmuseum:
   ingress:
-    securityGroup: "${TEKTON_DEMO_CHARTMUSEUM_SG}"
+    securityGroup: "sg-01dd64e517f1d12ee"
 dashboard:
   ingress:
-    securityGroup: "${TEKTON_DEMO_DASHBOARD_SG}"
+    securityGroup: "sg-0b299c13f753f0577"
 pipelines:
   codeRepo:
-    username: "${TEKTON_DEMO_GIT_USERNAME}"
-    password: "${TEKTON_DEMO_GIT_PASSWORD}"
-    passwordRaw: "${TEKTON_DEMO_GIT_PASSWORD_RAW}"
+    username: "b.mutiu%40deepsea.ai-at-190702572683"
+    usernameRaw: "b.mutiu@deepsea.ai-at-190702572683"
+    password: "LfUsSH3G85%2FS%2FRYPoUIqeCnevX4hCPvTWNjeYxioZJk%3D"
+    passwordRaw: "LfUsSH3G85/S/RYPoUIqeCnevX4hCPvTWNjeYxioZJk="
 triggers:
   ingress:
-    securityGroup: "${TEKTON_DEMO_WEBHOOK_SG}"
-
-
-
+    securityGroup: "sg-0748bfb49a4a2d15d"
