@@ -1,18 +1,21 @@
 region: "eu-west-1"
 accountId: "190702572683"
-allowedIpRange: "213.233.88.212/32"
+allowedIpRange: "213.233.88.180/32"
 chartmuseum:
   ingress:
-    securityGroup: "sg-01dd64e517f1d12ee"
+    securityGroup: "sg-05fbd46e7519ff323"
 dashboard:
   ingress:
-    securityGroup: "sg-0b299c13f753f0577"
+    securityGroup: "sg-0b1dc9c8fdeceb1a2"
 pipelines:
   codeRepo:
     username: "b.mutiu%40deepsea.ai-at-190702572683"
     usernameRaw: "b.mutiu@deepsea.ai-at-190702572683"
-    password: "LfUsSH3G85%2FS%2FRYPoUIqeCnevX4hCPvTWNjeYxioZJk%3D"
-    passwordRaw: "LfUsSH3G85/S/RYPoUIqeCnevX4hCPvTWNjeYxioZJk="
+    password: "oc5kkYL%2BswWhG6XYhCoEuGyIo1KapH6%2FRdPUshszuhQ%3D"
+    passwordRaw: "oc5kkYL+swWhG6XYhCoEuGyIo1KapH6/RdPUshszuhQ="
 triggers:
   ingress:
-    securityGroup: "sg-0748bfb49a4a2d15d"
+    securityGroup: "sg-0a3fdbcf8581a9cf2"
+
+
+

@@ -9,7 +9,7 @@ export CHARTMUSEUM_VERSION="3.10.1"
 export AWS_LB_CONTROLLER_VERSION="1.4.8"
 export AWS_EBS_CSI_DRIVER_VERSION="2.20.0"
 export ARGOCD_VERSION="v2.4.15"
-export EKS_VERSION="1.21"
+export EKS_VERSION="1.27"
 
 # init
 function pause(){
@@ -72,18 +72,20 @@ pause "cluster"
 echo "[INFO] $(date +"%T") Create git credentials for user ${AWS_AUTHENTICATED_IDENTITY}..."
 export TEKTON_DEMO_GIT_PASSWORD_RAW=$(aws iam create-service-specific-credential --service-name codecommit.amazonaws.com --user-name $AWS_AUTHENTICATED_IDENTITY | jq -r .ServiceSpecificCredential.ServicePassword)
 export TEKTON_DEMO_GIT_PASSWORD=$(echo -n $TEKTON_DEMO_GIT_PASSWORD_RAW | jq -Rr @uri)
-export TEKTON_DEMO_GIT_USERNAME=$(aws iam list-service-specific-credentials --service-name codecommit.amazonaws.com --user-name ${AWS_AUTHENTICATED_IDENTITY} | jq -r '.ServiceSpecificCredentials[] | select(.ServiceName == "codecommit.amazonaws.com") | .ServiceUserName')
+export TEKTON_DEMO_GIT_USERNAME_RAW=$(aws iam list-service-specific-credentials --service-name codecommit.amazonaws.com --user-name ${AWS_AUTHENTICATED_IDENTITY} | jq -r '.ServiceSpecificCredentials[] | select(.ServiceName == "codecommit.amazonaws.com") | .ServiceUserName')
+export TEKTON_DEMO_GIT_USERNAME=$(echo -n $TEKTON_DEMO_GIT_USERNAME_RAW | jq -Rr @uri)
 
 echo $TEKTON_DEMO_GIT_PASSWORD_RAW
 echo $TEKTON_DEMO_GIT_PASSWORD
+echo $TEKTON_DEMO_GIT_USERNAME_RAW
 echo $TEKTON_DEMO_GIT_USERNAME
 
 pause "git credentials CodeCommit"
 
 # Create stack TektonDemoBuckets
 echo "[INFO] $(date +"%T") Create <<TektonDemoBucket>> Cloudformation Stack..."
-#aws cloudformation create-stack --stack-name="TektonDemoBuckets" --template-body file://cloudformation/demo-code-bucket.yaml --capabilities "CAPABILITY_IAM" > /dev/null
-#aws cloudformation wait stack-create-complete --stack-name="TektonDemoBuckets"
+aws cloudformation create-stack --stack-name="TektonDemoBuckets" --template-body file://cloudformation/demo-code-bucket.yaml --capabilities "CAPABILITY_IAM" > /dev/null
+aws cloudformation wait stack-create-complete --stack-name="TektonDemoBuckets"
 
 # Fetch required stack output variables
 echo "[INFO] $(date +"%T") Fetch <<TektonDemoBucket>> Cloudformation Stack output variables..."
@@ -99,47 +101,52 @@ pause "stack TektonDemoBuckets"
 
 # Package and upload helm-springboot master helm chart
 echo "[INFO] $(date +"%T") Package helm master chart and upload to S3..."
-#helm package helm-springboot > /dev/null
-#aws s3 cp helm-springboot-0.1.0.tgz s3://${TEKTON_DEMO_CHARTMUSEUM_BUCKET}/ > /dev/null
-#rm -f helm-springboot-0.1.0.tgz
+helm package helm-springboot > /dev/null
+aws s3 cp helm-springboot-0.1.0.tgz s3://${TEKTON_DEMO_CHARTMUSEUM_BUCKET}/ > /dev/null
+rm -f helm-springboot-0.1.0.tgz
 
 # Upload tekton-demo-app-build
-#echo "[INFO] $(date +"%T") Upload source files to S3..."
-#cat tekton-demo-app-build/pom.xml | envsubst | tee $TMP_FILE > /dev/null && mv $TMP_FILE tekton-demo-app-build/pom.xml
-#cd tekton-demo-app-build
-#zip -r tekton-pipeline-demo-app-code.zip . > /dev/null 
-#aws s3 cp tekton-pipeline-demo-app-code.zip s3://${TEKTON_DEMO_CODE_BUCKET}/ > /dev/null 
-#rm -f tekton-pipeline-demo-app-code.zip
-#cd ..
+echo "[INFO] $(date +"%T") Upload source files to S3..."
+curl -O https://raw.githubusercontent.com/aws-samples/aws-pipeline-demo-with-tekton/main/tekton-demo-app-build/pom.xml
+mv pom.xml tekton-demo-app-build
+cat tekton-demo-app-build/pom.xml | envsubst | tee $TMP_FILE > /dev/null && mv $TMP_FILE tekton-demo-app-build/pom.xml
+cd tekton-demo-app-build
+zip -r tekton-pipeline-demo-app-code.zip . > /dev/null 
+aws s3 cp tekton-pipeline-demo-app-code.zip s3://${TEKTON_DEMO_CODE_BUCKET}/ > /dev/null 
+rm -f tekton-pipeline-demo-app-code.zip
+cd ..
 
 # Upload tekton-demo-app-deploy
 echo "[INFO] $(date +"%T") Upload deploy files to S3..."
-#cd tekton-demo-app-deploy
-#zip -r tekton-pipeline-demo-deploy-code.zip . > /dev/null 
-#aws s3 cp tekton-pipeline-demo-deploy-code.zip s3://${TEKTON_DEMO_CODE_BUCKET}/ > /dev/null 
-#rm -f tekton-pipeline-demo-deploy-code.zip
-#cd ..
+cd tekton-demo-app-deploy
+zip -r tekton-pipeline-demo-deploy-code.zip . > /dev/null 
+aws s3 cp tekton-pipeline-demo-deploy-code.zip s3://${TEKTON_DEMO_CODE_BUCKET}/ > /dev/null 
+rm -f tekton-pipeline-demo-deploy-code.zip
+cd ..
 
 # Build and upload tekton-webhook-middleware
 echo "[INFO] $(date +"%T") Compile webhook lambda and upload to S3..."
-#cd tekton-webhook-middleware
-#GOOS=linux GOARCH=amd64 go build -o tekton-webhook-middleware main.go > /dev/null
-#zip tekton-pipeline-demo-webhook-code.zip tekton-webhook-middleware > /dev/null 
-#aws s3 cp tekton-pipeline-demo-webhook-code.zip s3://${TEKTON_DEMO_CODE_BUCKET}/ > /dev/null
-#rm -f tekton-pipeline-demo-webhook-code.zip
-#rm -f tekton-webhook-middleware
-#cd ..
+cd tekton-webhook-middleware
+GOOS=linux GOARCH=amd64 go build -o tekton-webhook-middleware main.go > /dev/null
+zip tekton-pipeline-demo-webhook-code.zip tekton-webhook-middleware > /dev/null 
+aws s3 cp tekton-pipeline-demo-webhook-code.zip s3://${TEKTON_DEMO_CODE_BUCKET}/ > /dev/null
+rm -f tekton-pipeline-demo-webhook-code.zip
+rm -f tekton-webhook-middleware
+cd ..
 
 pause "upload"
 
 # Create the EKS Cluster IAM Roles
 echo "[INFO] $(date +"%T") Configure EKS Cluster..."
-#cat eks-cluster-iam-config.yaml | envsubst | tee $TMP_FILE > /dev/null && mv $TMP_FILE eks-cluster-iam-config.yaml
-#eksctl utils associate-iam-oidc-provider --cluster=$EKS_CLUSTER_NAME --approve
-#eksctl create iamserviceaccount --config-file=eks-cluster-iam-config.yaml --approve
+curl -O https://raw.githubusercontent.com/aws-samples/aws-pipeline-demo-with-tekton/main/eks-cluster-iam-config.yaml
+cat eks-cluster-iam-config.yaml | envsubst | tee $TMP_FILE > /dev/null && mv $TMP_FILE eks-cluster-iam-config.yaml
+eksctl utils associate-iam-oidc-provider --cluster=$EKS_CLUSTER_NAME --approve
+eksctl create iamserviceaccount --config-file=eks-cluster-iam-config.yaml --approve
 export TEKTON_DEMO_CLUSTER_SUBNETS=$(aws cloudformation describe-stacks --stack-name $EKS_CLUSTER_STACK | jq '.Stacks[0].Outputs[] | select(.OutputKey == "SubnetsPrivate") | .OutputValue')
 export TEKTON_DEMO_CLUSTER_VPC=$(aws cloudformation describe-stacks --stack-name $EKS_CLUSTER_STACK | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "VPC") | .OutputValue')
 export TEKTON_DEMO_CLUSTER_NODE_SG=$(aws cloudformation describe-stacks --stack-name $EKS_CLUSTER_STACK | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "ClusterSecurityGroupId") | .OutputValue')
+
+export TEKTON_DEMO_CLUSTER_SUBNETS=$(echo $TEKTON_DEMO_CLUSTER_SUBNETS|sed 's/,/ /g')
 
 echo $TEKTON_DEMO_CLUSTER_SUBNETS
 echo $TEKTON_DEMO_CLUSTER_VPC
@@ -149,8 +156,8 @@ pause "eks"
 
 # Create CF Stack "TektonDemoInfra"
 echo "[INFO] $(date +"%T") Create <<TektonDemoInfra>> Cloudformation Stack..."
-# aws cloudformation create-stack --stack-name="TektonDemoInfra" --template-body file://cloudformation/demo-infra.yaml --parameters ParameterKey=TektonDemoSourceBucket,ParameterValue="${TEKTON_DEMO_CODE_BUCKET}" ParameterKey=TektonDemoClusterSubnets,ParameterValue="${TEKTON_DEMO_CLUSTER_SUBNETS}" ParameterKey=TektonDemoClusterVpc,ParameterValue="${TEKTON_DEMO_CLUSTER_VPC}" ParameterKey=AllowedIpAddress,ParameterValue="${MY_IP_ADDRESS}" --capabilities "CAPABILITY_IAM" > /dev/null
-# aws cloudformation wait stack-create-complete --stack-name="TektonDemoInfra"
+aws cloudformation create-stack --stack-name="TektonDemoInfra" --template-body file://cloudformation/demo-infra.yaml --parameters ParameterKey=TektonDemoSourceBucket,ParameterValue="${TEKTON_DEMO_CODE_BUCKET}" ParameterKey=TektonDemoClusterSubnets,ParameterValue="${TEKTON_DEMO_CLUSTER_SUBNETS}" ParameterKey=TektonDemoClusterVpc,ParameterValue="${TEKTON_DEMO_CLUSTER_VPC}" ParameterKey=AllowedIpAddress,ParameterValue="${MY_IP_ADDRESS}" --capabilities "CAPABILITY_IAM" > /dev/null
+aws cloudformation wait stack-create-complete --stack-name="TektonDemoInfra"
 export TEKTON_DEMO_CHARTMUSEUM_SG=$(aws cloudformation describe-stacks --stack-name TektonDemoInfra | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "ChartmuseumSecurityGroup") | .OutputValue')
 export TEKTON_DEMO_DASHBOARD_SG=$(aws cloudformation describe-stacks --stack-name TektonDemoInfra | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "DashboardSecurityGroup") | .OutputValue')
 export TEKTON_DEMO_APP_SG=$(aws cloudformation describe-stacks --stack-name TektonDemoInfra | jq -r '.Stacks[0].Outputs[] | select(.OutputKey == "AppSecurityGroup") | .OutputValue')
@@ -165,37 +172,39 @@ pause "stack TektonDemoInfra"
 
 # Update Security Group of Worker Nodes
 echo "[INFO] $(date +"%T") Update EKS worker node security groups..."
-#aws ec2 authorize-security-group-ingress --group-id $TEKTON_DEMO_CLUSTER_NODE_SG --ip-permissions IpProtocol=tcp,FromPort=30000,ToPort=32767,UserIdGroupPairs=[{GroupId=$TEKTON_DEMO_DASHBOARD_SG}]
-#aws ec2 authorize-security-group-ingress --group-id $TEKTON_DEMO_CLUSTER_NODE_SG --ip-permissions IpProtocol=tcp,FromPort=30000,ToPort=32767,UserIdGroupPairs=[{GroupId=$TEKTON_DEMO_APP_SG}]
-#aws ec2 authorize-security-group-ingress --group-id $TEKTON_DEMO_CLUSTER_NODE_SG --ip-permissions IpProtocol=tcp,FromPort=30000,ToPort=32767,UserIdGroupPairs=[{GroupId=$TEKTON_DEMO_WEBHOOK_SG}]
-#aws ec2 authorize-security-group-ingress --group-id $TEKTON_DEMO_CLUSTER_NODE_SG --ip-permissions IpProtocol=tcp,FromPort=30000,ToPort=32767,UserIdGroupPairs=[{GroupId=$TEKTON_DEMO_CHARTMUSEUM_SG}]
+aws ec2 authorize-security-group-ingress --group-id $TEKTON_DEMO_CLUSTER_NODE_SG --ip-permissions IpProtocol=tcp,FromPort=30000,ToPort=32767,UserIdGroupPairs=[{GroupId=$TEKTON_DEMO_DASHBOARD_SG}]
+aws ec2 authorize-security-group-ingress --group-id $TEKTON_DEMO_CLUSTER_NODE_SG --ip-permissions IpProtocol=tcp,FromPort=30000,ToPort=32767,UserIdGroupPairs=[{GroupId=$TEKTON_DEMO_APP_SG}]
+aws ec2 authorize-security-group-ingress --group-id $TEKTON_DEMO_CLUSTER_NODE_SG --ip-permissions IpProtocol=tcp,FromPort=30000,ToPort=32767,UserIdGroupPairs=[{GroupId=$TEKTON_DEMO_WEBHOOK_SG}]
+aws ec2 authorize-security-group-ingress --group-id $TEKTON_DEMO_CLUSTER_NODE_SG --ip-permissions IpProtocol=tcp,FromPort=30000,ToPort=32767,UserIdGroupPairs=[{GroupId=$TEKTON_DEMO_CHARTMUSEUM_SG}]
 
 pause "eks sg"
 
 # Build cloner image
 echo "[INFO] $(date +"%T") Build cloner container image and upload to ECR..."
 aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com > /dev/null
-#docker build -t cloner ./docker/cloner --platform linux/amd64 > /dev/null
-#docker tag cloner:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/cloner:latest
-#docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/cloner:latest > /dev/null 
+
+docker build -t cloner ./docker/cloner --platform linux/amd64 > /dev/null
+docker tag cloner:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/cloner:latest
+docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/cloner:latest > /dev/null 
 
 # Build maven-builder image
 echo "[INFO] $(date +"%T") Build maven-build container image and upload to ECR..."
-#docker build -t maven-builder ./docker/maven-builder --platform linux/amd64 > /dev/null
-#docker tag maven-builder:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/maven-builder:latest
-#docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/maven-builder:latest > /dev/null
+docker build -t maven-builder ./docker/maven-builder --platform linux/amd64 > /dev/null
+docker tag maven-builder:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/maven-builder:latest
+docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/maven-builder:latest > /dev/null
 
 pause "build"
 
 # Install AWS EBS CSI Driver
 echo "[INFO] $(date +"%T") Deploy aws-ebs-csi-driver [${AWS_EBS_CSI_DRIVER_VERSION}]..."
-# helm repo add aws-ebs-csi-driver https://kubernetes-sigs.github.io/aws-ebs-csi-driver > /dev/null
-# helm install -n kube-system aws-ebs-csi-driver aws-ebs-csi-driver/aws-ebs-csi-driver --version $AWS_EBS_CSI_DRIVER_VERSION --set enableVolumeScheduling=true --set enableVolumeResizing=true --set enableVolumeSnapshot=true --set serviceAccount.snapshot.create=false --set serviceAccount.controller.create=false --set serviceAccount.controller.name=ebs-csi-controller-sa --set serviceAccount.snapshot.name=ebs-csi-controller-sa > /dev/null
+#helm repo add aws-ebs-csi-driver https://kubernetes-sigs.github.io/aws-ebs-csi-driver > /dev/null
+kubectl -n kube-system patch serviceaccount ebs-csi-controller-sa -p '{"metadata":{"labels":{"app.kubernetes.io/managed-by":"Helm"},"annotations":{"meta.helm.sh/release-name":"aws-ebs-csi-driver","meta.helm.sh/release-namespace":"kube-system"}}}'
+helm install -n kube-system aws-ebs-csi-driver aws-ebs-csi-driver/aws-ebs-csi-driver --version $AWS_EBS_CSI_DRIVER_VERSION --set enableVolumeScheduling=true --set enableVolumeResizing=true --set enableVolumeSnapshot=true --set serviceAccount.snapshot.create=false --set serviceAccount.controller.create=false --set serviceAccount.controller.name=ebs-csi-controller-sa --set serviceAccount.snapshot.name=ebs-csi-controller-sa > /dev/null
 
 # Install AWS Load Balancer Controller
 echo "[INFO] $(date +"%T") Deploy aws-load-balancer-controller [${AWS_LB_CONTROLLER_VERSION}]..."
-# helm repo add eks https://aws.github.io/eks-charts > /dev/null
-# helm install -n kube-system aws-load-balancer-controller eks/aws-load-balancer-controller --version $AWS_LB_CONTROLLER_VERSION --set clusterName=tekton-pipeline-demo-cluster --set serviceAccount.create=false --set serviceAccount.name=aws-lb-controller-sa > /dev/null 
+#helm repo add eks https://aws.github.io/eks-charts > /dev/null
+helm install -n kube-system aws-load-balancer-controller eks/aws-load-balancer-controller --version $AWS_LB_CONTROLLER_VERSION --set clusterName=tekton-pipeline-demo-cluster --set serviceAccount.create=false --set serviceAccount.name=aws-lb-controller-sa > /dev/null 
 
 pause "aws ebs csi & lb controller"
 
@@ -221,13 +230,14 @@ pause "tekton"
 # Install Chartmuseum
 echo "[INFO] $(date +"%T") Deploy Chartmuseum [${CHARTMUSEUM_VERSION}]..."
 # helm repo add chartmuseum https://chartmuseum.github.io/charts > /dev/null
-# cat chartmuseum-values.yaml | envsubst | tee $TMP_FILE > /dev/null && mv $TMP_FILE chartmuseum-values.yaml
-# helm install -n support chartmuseum chartmuseum/chartmuseum --version $CHARTMUSEUM_VERSION -f chartmuseum-values.yaml > /dev/null
+curl -O https://raw.githubusercontent.com/aws-samples/aws-pipeline-demo-with-tekton/main/chartmuseum-values.yaml
+cat chartmuseum-values.yaml | envsubst | tee $TMP_FILE > /dev/null && mv $TMP_FILE chartmuseum-values.yaml
+helm install -n support chartmuseum chartmuseum/chartmuseum --version $CHARTMUSEUM_VERSION -f chartmuseum-values.yaml > /dev/null
 
 # Install ArgoCD
 echo "[INFO] $(date +"%T") Deploy ArgoCD [${ARGOCD_VERSION}]..."
-# kubectl create namespace argocd
-# kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/install.yaml
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/${ARGOCD_VERSION}/manifests/install.yaml
 
 pause "chartmuseum & argocd"
 
@@ -242,9 +252,12 @@ pause "patch svc"
 
 # INSTALL TEKTON DEMO 
 echo "[INFO] $(date +"%T") Deploy resources related to the demo..."
-# cat tekton-pipeline-demo-k8s-artifacts/values.yaml | envsubst | tee $TMP_FILE > /dev/null && mv $TMP_FILE tekton-pipeline-demo-k8s-artifacts/values.yaml
-# helm install tekton-pipeline-demo-k8s-artifacts -f tekton-pipeline-demo-k8s-artifacts/values.yaml --generate-name > /dev/null 
-sleep 30
+curl -O https://raw.githubusercontent.com/aws-samples/aws-pipeline-demo-with-tekton/main/tekton-pipeline-demo-k8s-artifacts/values.yaml
+mv values.yaml tekton-pipeline-demo-k8s-artifacts/values.yaml
+cp tekton-pipeline-demo-k8s-artifacts/values.yaml.sample tekton-pipeline-demo-k8s-artifacts/values.yaml
+cat tekton-pipeline-demo-k8s-artifacts/values.yaml | envsubst | tee $TMP_FILE > /dev/null && mv $TMP_FILE tekton-pipeline-demo-k8s-artifacts/values.yaml
+helm install tekton-pipeline-demo-k8s-artifacts -f tekton-pipeline-demo-k8s-artifacts/values.yaml --generate-name > /dev/null 
+sleep 49
 
 pause "tekton-pipeline-demo"
 
@@ -263,8 +276,6 @@ pause "webhook"
 echo "[INFO] $(date +"%T") Update manifest files within deploy repository..."
 mkdir git-clone
 cd git-clone
-# export TEKTON_DEMO_GIT_USERNAME=b.mutiu%40deepsea.ai-at-190702572683
-# export TEKTON_DEMO_GIT_PASSWORD_RAW=LfUsSH3G85%2FS%2FRYPoUIqeCnevX4hCPvTWNjeYxioZJk%3D
 git clone https://${TEKTON_DEMO_GIT_USERNAME}:${TEKTON_DEMO_GIT_PASSWORD}@git-codecommit.${AWS_REGION}.amazonaws.com/v1/repos/tekton-demo-app-deploy > /dev/null 
 cd tekton-demo-app-deploy
 cat values.yaml | envsubst | tee $TMP_FILE > /dev/null && mv $TMP_FILE values.yaml

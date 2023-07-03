@@ -18,7 +18,7 @@ iam:
         name: chartmuseum-sa
         namespace: support
       attachPolicyARNs:
-        - arn:aws:iam::190702572683:policy/TektonDemoBuckets-TektonDemoServiceAccountChartPolicy-1S1KHNHKLNCCA
+        - arn:aws:iam::190702572683:policy/TektonDemoBuckets-TektonDemoServiceAccountChartPolicy-J99EJ2MKND2B
     - metadata:
         name: aws-lb-controller-sa
         namespace: kube-system

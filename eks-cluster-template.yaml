@@ -4,7 +4,7 @@ kind: ClusterConfig
 metadata:
   name: tekton-pipeline-demo-cluster
   region: eu-west-1
-  version: "1.26"
+  version: "1.27"
   tags:
     project: tekton-pipeline-demo
 
